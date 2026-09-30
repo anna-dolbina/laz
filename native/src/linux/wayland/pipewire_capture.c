@@ -278,6 +278,12 @@ static void cleanupCaptureApp(CaptureApp *app) {
     pw_stream_destroy(app->stream);
     app->stream = NULL;
   }
+  if (app->registry) {
+    // pw_core_disconnect() does not free proxies owned by the caller.
+    spa_hook_remove(&app->registry_listener);
+    pw_proxy_destroy((struct pw_proxy *)app->registry);
+    app->registry = NULL;
+  }
   if (app->core) {
     pw_core_disconnect(app->core);
     app->core = NULL;
@@ -321,7 +327,9 @@ bool pipewireCaptureFrame(int pipewireFd, uint32_t nodeId, CapturedFrame *outFra
 
   struct pw_loop *innerLoop = pw_thread_loop_get_loop(app.loop);
 
-  app.context = pw_context_new(innerLoop, NULL, 0);
+  // Skip module-rt: a one-shot capture doesn't need realtime threads, and the module loads libdbus,
+  // which leaks on every unload, and permanently lowers the process RLIMIT_RTTIME.
+  app.context = pw_context_new(innerLoop, pw_properties_new("module.rt", "false", NULL), 0);
   if (!app.context) {
     pw_thread_loop_destroy(app.loop);
     return false;
