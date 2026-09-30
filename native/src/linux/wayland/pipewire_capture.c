@@ -271,12 +271,22 @@ static const struct pw_stream_events g_streamEvents = {
 // Releases all resources owned by a CaptureApp. Must be called with the loop unlocked.
 // Nulls out freed/destroyed fields so the function is safe to call on partially-initialized state.
 static void cleanupCaptureApp(CaptureApp *app) {
+  // Tear down PipeWire objects under the lock while the loop thread is still running.
+  if (app->loop) pw_thread_loop_lock(app->loop);
   if (app->stream) {
-    pw_thread_loop_lock(app->loop);
     pw_stream_disconnect(app->stream);
     pw_stream_destroy(app->stream);
-    pw_thread_loop_unlock(app->loop);
     app->stream = NULL;
+  }
+  if (app->core) {
+    pw_core_disconnect(app->core);
+    app->core = NULL;
+  }
+  if (app->loop) pw_thread_loop_unlock(app->loop);
+
+  // No callbacks can run after the loop thread is stopped.
+  if (app->loop) {
+    pw_thread_loop_stop(app->loop);
   }
 
   free(app->target_object);
@@ -284,15 +294,6 @@ static void cleanupCaptureApp(CaptureApp *app) {
 
   free(app->bgrx_buf);
   app->bgrx_buf = NULL;
-
-  if (app->core) {
-    pw_core_disconnect(app->core);
-    app->core = NULL;
-  }
-
-  if (app->loop) {
-    pw_thread_loop_stop(app->loop);
-  }
 
   if (app->context) {
     pw_context_destroy(app->context);
@@ -418,8 +419,7 @@ bool pipewireCaptureFrame(int pipewireFd, uint32_t nodeId, CapturedFrame *outFra
     }
   }
 
-  pw_thread_loop_unlock(app.loop);
-
+  // Take the frame while still holding the lock so callbacks cannot modify it.
   bool success = false;
   if (app.frame_captured && !app.has_failed) {
     outFrame->data = app.bgrx_buf;
@@ -430,6 +430,7 @@ bool pipewireCaptureFrame(int pipewireFd, uint32_t nodeId, CapturedFrame *outFra
     success = true;
   }
 
+  pw_thread_loop_unlock(app.loop);
   cleanupCaptureApp(&app);
 
   return success;
