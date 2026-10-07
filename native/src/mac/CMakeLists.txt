@@ -14,6 +14,7 @@ add_library(Laz MODULE
         screen.mm
         clipboard.mm
         layout.mm
+        a11y.mm
 )
 
 target_include_directories(Laz PRIVATE
@@ -25,6 +26,7 @@ target_link_libraries(Laz PRIVATE
         LazHeaders
         "-framework Foundation"
         "-framework Cocoa"
+        "-framework ApplicationServices"
         "-framework ScreenCaptureKit"
         "-framework Carbon"
 )
