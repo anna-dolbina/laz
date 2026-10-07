@@ -14,8 +14,7 @@ add_library(Laz MODULE
         screen.mm
         clipboard.mm
         layout.mm
-        # TODO: replace with an AXUIElement backend (a11y.mm).
-        ../common/a11y_unavailable.c
+        a11y.mm
 )
 
 target_include_directories(Laz PRIVATE
@@ -27,6 +26,7 @@ target_link_libraries(Laz PRIVATE
         LazHeaders
         "-framework Foundation"
         "-framework Cocoa"
+        "-framework ApplicationServices"
         "-framework ScreenCaptureKit"
         "-framework Carbon"
 )

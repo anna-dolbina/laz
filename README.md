@@ -238,9 +238,12 @@ bool isRed = r > 200 && g < 50 && b < 50;
 ### Accessibility
 
 > [!NOTE]
-> Accessibility support is currently available on Windows (UI Automation). On macOS and Linux, `IsAvailable()`
-> returns `false` and other methods throw `PlatformNotSupportedException` until the AXUIElement and AT-SPI backends
-> land.
+> Accessibility support is currently available on Windows (UI Automation) and macOS (AXUIElement). On Linux,
+> `IsAvailable()` returns `false` and other methods throw `PlatformNotSupportedException` until the AT-SPI backend
+> lands.
+>
+> On macOS, reading the tree requires the Accessibility permission, the same one that mouse and keyboard
+> simulation need. `IsAvailable(prompt: true)` shows the system prompt that asks for it.
 
 The `Accessibility` API reads the accessibility tree: windows, controls, their names, values, states, and bounds.
 It is read-only. Bounds use the same coordinate space as `Mouse`, so you can find a control by its role and name
